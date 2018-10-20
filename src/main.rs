@@ -28,6 +28,10 @@ use vulkano::sync::GpuFuture;
 
 use std::sync::Arc;
 
+mod shaders;
+use shaders::get_fragment_shader;
+use shaders::get_vertex_shader;
+
 fn main() {
     let instance = {
         let extensions = vulkano_win::required_extensions();
@@ -110,13 +114,22 @@ fn main() {
             BufferUsage::all(),
             [
                 Vertex {
-                    position: [-0.5, -0.25],
+                    position: [-1.0, -1.0],
                 },
                 Vertex {
-                    position: [0.0, 0.5],
+                    position: [1.0, -1.0],
                 },
                 Vertex {
-                    position: [0.25, -0.1],
+                    position: [-1.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, 1.0],
+                },
+                Vertex {
+                    position: [1.0, -1.0],
+                },
+                Vertex {
+                    position: [-1.0, 1.0],
                 },
             ]
                 .iter()
@@ -124,40 +137,8 @@ fn main() {
         ).expect("failed to create buffer")
     };
 
-    mod vs {
-        #[derive(VulkanoShader)]
-        #[ty = "vertex"]
-        #[src = "
-#version 450
-
-layout(location = 0) in vec2 position;
-
-void main() {
-    gl_Position = vec4(position, 0.0, 1.0);
-}
-"]
-        #[allow(dead_code)]
-        struct Dummy;
-    }
-
-    mod fs {
-        #[derive(VulkanoShader)]
-        #[ty = "fragment"]
-        #[src = "
-#version 450
-
-layout(location = 0) out vec4 f_color;
-
-void main() {
-    f_color = vec4(1.0, 0.0, 0.0, 1.0);
-}
-"]
-        #[allow(dead_code)]
-        struct Dummy;
-    }
-
-    let vs = vs::Shader::load(device.clone()).expect("failed to create shader module");
-    let fs = fs::Shader::load(device.clone()).expect("failed to create shader module");
+    let vs = get_vertex_shader(device.clone());
+    let fs = get_fragment_shader(device.clone());
 
     let render_pass = Arc::new(
         single_pass_renderpass!(device.clone(),
