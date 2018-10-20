@@ -27,6 +27,7 @@ use vulkano::sync::now;
 use vulkano::sync::GpuFuture;
 
 use std::sync::Arc;
+use std::time::SystemTime;
 
 mod shaders;
 use shaders::get_fragment_shader;
@@ -185,7 +186,23 @@ fn main() {
         scissors: None,
     };
 
+    let mut last_time = SystemTime::now();
+    let mut timer = 0.0;
+
     loop {
+        let current_time = SystemTime::now();
+        let delta_time = current_time
+            .duration_since(last_time)
+            .unwrap()
+            .subsec_nanos() as f32 / 10.0e8;
+        let new_time = timer + delta_time;
+        if new_time == timer {
+            timer = 0.0;
+        } else {
+            timer = new_time;
+        }
+        last_time = current_time;
+
         previous_frame_end.cleanup_finished();
 
         if recreate_swapchain {
@@ -256,7 +273,7 @@ fn main() {
                     &dynamic_state,
                     vertex_buffer.clone(),
                     (),
-                    (),
+                    timer,
                 ).unwrap()
                 .end_render_pass()
                 .unwrap()
