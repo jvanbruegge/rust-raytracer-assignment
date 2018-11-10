@@ -33,6 +33,12 @@ mod shaders;
 use shaders::get_fragment_shader;
 use shaders::get_vertex_shader;
 
+#[derive(Clone, Copy)]
+struct PushData {
+    time: f32,
+    resolution: [u32; 2],
+}
+
 fn main() {
     let instance = {
         let extensions = vulkano_win::required_extensions();
@@ -48,6 +54,8 @@ fn main() {
         physical.name(),
         physical.ty()
     );
+
+    println!("Device push constant limit: {}", physical.limits().max_push_constants_size());
 
     let mut events_loop = winit::EventsLoop::new();
     let surface = winit::WindowBuilder::new()
@@ -187,7 +195,13 @@ fn main() {
     };
 
     let mut last_time = SystemTime::now();
-    let mut timer = 0.0;
+
+    let mut push_data = PushData {
+        time: 0.0,
+        resolution: dimensions,
+    };
+
+    let mut new_dimensions = dimensions;
 
     loop {
         let current_time = SystemTime::now();
@@ -195,11 +209,11 @@ fn main() {
             .duration_since(last_time)
             .unwrap()
             .subsec_nanos() as f32 / 10.0e8;
-        let new_time = timer + delta_time;
-        if new_time == timer {
-            timer = 0.0;
+        let new_time = push_data.time + delta_time;
+        if new_time == push_data.time {
+            push_data.time = 0.0;
         } else {
-            timer = new_time;
+            push_data.time = new_time;
         }
         last_time = current_time;
 
@@ -211,6 +225,15 @@ fn main() {
                 .expect("failed to get surface capabilities")
                 .current_extent
                 .unwrap();
+        }
+        if dimensions != new_dimensions {
+            recreate_swapchain = true;
+            dimensions = new_dimensions;
+        }
+        if recreate_swapchain {
+            // apparently shaders have swapped vectors
+            push_data.resolution[0] = dimensions[1];
+            push_data.resolution[1] = dimensions[0];
 
             let (new_swapchain, new_images) = match swapchain.recreate_with_dimension(dimensions) {
                 Ok(r) => r,
@@ -273,7 +296,7 @@ fn main() {
                     &dynamic_state,
                     vertex_buffer.clone(),
                     (),
-                    timer,
+                    push_data,
                 ).unwrap()
                 .end_render_pass()
                 .unwrap()
@@ -307,6 +330,13 @@ fn main() {
                 event: winit::WindowEvent::CloseRequested,
                 ..
             } => done = true,
+            winit::Event::WindowEvent {
+                event: winit::WindowEvent::Resized(size),
+                ..
+            } => {
+                let (w, h): (u32, u32) = size.into();
+                new_dimensions = [w, h];
+            },
             _ => (),
         });
         if done {

@@ -17,6 +17,9 @@ void main() {
     struct Dummy;
 }
 
+#[allow(dead_code)] // Used to force recompilation of shader change
+const X: &str = include_str!("../shaders/fragment.glsl");
+
 mod fs {
     #[derive(VulkanoShader)]
     #[ty = "fragment"]
