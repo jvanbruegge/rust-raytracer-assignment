@@ -15,10 +15,14 @@ I will update this section with more images
 
 Currently this raytracer looks like this:
 
-### Changing color based on window width
-![](./progress/02_window_size.gif)
+### First triangle rendered
+
+![](./progress/03_first_triangle.png)
 
 Older versions (reverse chronological order):
 
-### Changing color based on time
-![39906da76704fdbcb40fd087e4172b560fd07ecc](./progress/01_first_timer.gif)
+### Changing color based on window width ([commit](https://github.com/jvanbruegge/rust-raytracer-assignment/commit/719b86d65bcd53451fa37ab88d8be538a5ffc4fb))
+![](./progress/02_window_size.gif)
+
+### Changing color based on time ([commit](https://github.com/jvanbruegge/rust-raytracer-assignment/commit/39906da76704fdbcb40fd087e4172b560fd07ecc))
+![](./progress/01_first_timer.gif)
