@@ -7,32 +7,24 @@ extern crate winit;
 
 use vulkano_win::VkSurfaceBuild;
 
-use vulkano::buffer::BufferUsage;
-use vulkano::buffer::CpuAccessibleBuffer;
-use vulkano::command_buffer::AutoCommandBufferBuilder;
-use vulkano::command_buffer::DynamicState;
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
 use vulkano::device::Device;
-use vulkano::framebuffer::Framebuffer;
-use vulkano::framebuffer::Subpass;
+use vulkano::framebuffer::{Framebuffer, Subpass};
 use vulkano::instance::Instance;
 use vulkano::pipeline::viewport::Viewport;
 use vulkano::pipeline::GraphicsPipeline;
 use vulkano::swapchain;
-use vulkano::swapchain::AcquireError;
-use vulkano::swapchain::PresentMode;
-use vulkano::swapchain::SurfaceTransform;
-use vulkano::swapchain::Swapchain;
-use vulkano::swapchain::SwapchainCreationError;
-use vulkano::sync::now;
-use vulkano::sync::GpuFuture;
+use vulkano::swapchain::{
+    AcquireError, PresentMode, SurfaceTransform, Swapchain, SwapchainCreationError,
+};
+use vulkano::sync::{now, GpuFuture};
 
 use std::sync::Arc;
 use std::time::SystemTime;
 
-mod shaders;
-use shaders::get_fragment_shader;
-use shaders::get_vertex_shader;
 mod object_loader;
+mod shaders;
 
 #[derive(Clone, Copy)]
 struct PushData {
@@ -145,8 +137,8 @@ fn main() {
         ).expect("failed to create buffer")
     };
 
-    let vs = get_vertex_shader(device.clone());
-    let fs = get_fragment_shader(device.clone());
+    let vs = shaders::get_vertex_shader(device.clone());
+    let fs = shaders::get_fragment_shader(device.clone());
 
     let render_pass = Arc::new(
         single_pass_renderpass!(device.clone(),
@@ -202,8 +194,7 @@ fn main() {
 
     let mut new_dimensions = dimensions;
 
-    let model = object_loader::load_model();
-
+    let _model = object_loader::load_model();
     println!("Loaded model");
 
     loop {
@@ -229,8 +220,7 @@ fn main() {
                 .expect("failed to get surface capabilities")
                 .current_extent
                 .unwrap();
-        }
-        if dimensions != new_dimensions {
+        } else if dimensions != new_dimensions {
             recreate_swapchain = true;
             dimensions = new_dimensions;
         }
