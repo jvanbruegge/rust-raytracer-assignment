@@ -32,6 +32,7 @@ use std::time::SystemTime;
 mod shaders;
 use shaders::get_fragment_shader;
 use shaders::get_vertex_shader;
+mod object_loader;
 
 #[derive(Clone, Copy)]
 struct PushData {
@@ -54,8 +55,6 @@ fn main() {
         physical.name(),
         physical.ty()
     );
-
-    println!("Device push constant limit: {}", physical.limits().max_push_constants_size());
 
     let mut events_loop = winit::EventsLoop::new();
     let surface = winit::WindowBuilder::new()
@@ -203,12 +202,17 @@ fn main() {
 
     let mut new_dimensions = dimensions;
 
+    let model = object_loader::load_model();
+
+    println!("Loaded model");
+
     loop {
         let current_time = SystemTime::now();
         let delta_time = current_time
             .duration_since(last_time)
             .unwrap()
-            .subsec_nanos() as f32 / 10.0e8;
+            .subsec_nanos() as f32
+            / 10.0e8;
         let new_time = push_data.time + delta_time;
         if new_time == push_data.time {
             push_data.time = 0.0;
@@ -336,7 +340,7 @@ fn main() {
             } => {
                 let (w, h): (u32, u32) = size.into();
                 new_dimensions = [w, h];
-            },
+            }
             _ => (),
         });
         if done {
