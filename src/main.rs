@@ -7,8 +7,9 @@ extern crate winit;
 
 use vulkano_win::VkSurfaceBuild;
 
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::device::Device;
 use vulkano::framebuffer::{Framebuffer, Subpass};
 use vulkano::instance::Instance;
@@ -27,9 +28,12 @@ mod object_loader;
 mod shaders;
 
 #[derive(Clone, Copy)]
+#[allow(dead_code)]
 struct PushData {
     time: f32,
     resolution: [u32; 2],
+    vert_length: u32,
+    idx_length: u32,
 }
 
 fn main() {
@@ -173,8 +177,6 @@ fn main() {
 
     let mut recreate_swapchain = false; //On window resize the swapchain has to be recreated
 
-    let mut previous_frame_end = Box::new(now(device.clone())) as Box<GpuFuture>;
-
     let mut dynamic_state = DynamicState {
         line_width: None,
         viewports: Some(vec![Viewport {
@@ -187,15 +189,43 @@ fn main() {
 
     let mut last_time = SystemTime::now();
 
+    let model = object_loader::load_model();
+    println!("Loaded model");
+
     let mut push_data = PushData {
         time: 0.0,
         resolution: dimensions,
+        vert_length: model.vertices.len() as u32,
+        idx_length: model.indices.len() as u32,
     };
 
     let mut new_dimensions = dimensions;
 
-    let _model = object_loader::load_model();
-    println!("Loaded model");
+    let (vertex_uniform, f1) = ImmutableBuffer::from_iter(
+        model.vertices.into_iter(),
+        BufferUsage::all(),
+        queue.clone(),
+    ).expect("Failed to create vertex uniform buffer");
+
+    let (index_uniform, f2) = ImmutableBuffer::from_iter(
+        model.indices.into_iter(),
+        BufferUsage::all(),
+        queue.clone(),
+    ).expect("Failed to create index uniform buffer");
+
+    let mut previous_frame_end = Box::new(
+        now(device.clone()).join(f1).join(f2).then_signal_fence_and_flush().unwrap()
+    ) as Box<GpuFuture>;
+
+    let set = Arc::new(
+        PersistentDescriptorSet::start(pipeline.clone(), 0)
+            .add_buffer(vertex_uniform.clone())
+            .unwrap()
+            .add_buffer(index_uniform.clone())
+            .unwrap()
+            .build()
+            .unwrap(),
+    );
 
     loop {
         let current_time = SystemTime::now();
@@ -225,9 +255,8 @@ fn main() {
             dimensions = new_dimensions;
         }
         if recreate_swapchain {
-            // apparently shaders have swapped vectors
-            push_data.resolution[0] = dimensions[1];
-            push_data.resolution[1] = dimensions[0];
+            println!("new size: {}, {}", dimensions[0], dimensions[1]);
+            push_data.resolution = dimensions;
 
             let (new_swapchain, new_images) = match swapchain.recreate_with_dimension(dimensions) {
                 Ok(r) => r,
@@ -289,7 +318,7 @@ fn main() {
                     pipeline.clone(),
                     &dynamic_state,
                     vertex_buffer.clone(),
-                    (),
+                    set.clone(),
                     push_data,
                 ).unwrap()
                 .end_render_pass()

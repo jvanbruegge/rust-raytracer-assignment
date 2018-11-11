@@ -4,15 +4,8 @@ use std::ops::Deref;
 use std::str::FromStr;
 
 pub struct Model {
-    pub vertices: Vec<Vertex>,
-    pub indices: Vec<[u32; 3]>,
-}
-
-#[derive(Clone, Copy)]
-pub struct Vertex {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub vertices: Vec<[f32; 4]>,
+    pub indices: Vec<[u32; 4]>,
 }
 
 #[derive(PartialEq, Eq)]
@@ -29,7 +22,7 @@ pub fn load_model() -> Model {
 
     let mut state = ParseState::Header;
 
-    let mut vecs: (Vec<Vertex>, Vec<[u32; 3]>) = (vec![], vec![]);
+    let mut vecs: (Vec<[f32; 4]>, Vec<[u32; 4]>) = (vec![], vec![]);
     let mut i: usize = 0;
     let mut vert_count = 0;
 
@@ -54,16 +47,16 @@ pub fn load_model() -> Model {
                 }
             }
             ParseState::Vertices => {
-                if vert_count == 1 {
+                vert_count = vert_count - 1;
+                let mut numbers = s.split_whitespace();
+                vecs.0.push([
+                    f32::from_str(numbers.next().unwrap()).unwrap(),
+                    f32::from_str(numbers.next().unwrap()).unwrap(),
+                    f32::from_str(numbers.next().unwrap()).unwrap(),
+                    0.0
+                ]);
+                if vert_count == 0 {
                     state = ParseState::Indices;
-                } else {
-                    vert_count = vert_count - 1;
-                    let mut numbers = s.split_whitespace();
-                    vecs.0.push(Vertex {
-                        x: f32::from_str(numbers.next().unwrap()).unwrap(),
-                        y: f32::from_str(numbers.next().unwrap()).unwrap(),
-                        z: f32::from_str(numbers.next().unwrap()).unwrap(),
-                    });
                 }
             }
             ParseState::Indices => {
@@ -72,6 +65,7 @@ pub fn load_model() -> Model {
                     u32::from_str_radix(numbers.next().unwrap(), 10).unwrap(),
                     u32::from_str_radix(numbers.next().unwrap(), 10).unwrap(),
                     u32::from_str_radix(numbers.next().unwrap(), 10).unwrap(),
+                    0,
                 ]);
             }
         }
