@@ -74,21 +74,24 @@ bool testIntersection(in vec3 ray, in vec3 v0, in vec3 v1, in vec3 v2, out vec3 
 void main() {
     vec3 ray = getRay();
     bool hit = false;
+    vec3 normal;
     vec3 tmp;
 
     for(uint i = 0; i < idx.indices.length(); i++) {
         uvec3 n = idx.indices[i];
+        vec3 v0 = vert.vertices[n.x];
+        vec3 v1 = vert.vertices[n.y];
+        vec3 v2 = vert.vertices[n.z];
 
-        if(testIntersection(
-            ray, vert.vertices[n.x], vert.vertices[n.y], vert.vertices[n.z], tmp
-        )) {
+        if(testIntersection(ray, v0, v1, v2, tmp)) {
             hit = true;
+            normal = normalize(cross(v1 - v0, v2 - v0));
             break;
         }
     }
 
     if(hit) {
-        f_color = vec4(1.0);
+        f_color = vec4(normal, 1.0);
     } else {
         f_color = vec4(0.0);
     }
