@@ -25,8 +25,8 @@ const X1: &str = include_str!("../shaders/example.glsl");
 mod fs {
     #[derive(VulkanoShader)]
     #[ty = "fragment"]
-    //#[path = "shaders/fragment.glsl"]
-    #[path = "shaders/example.glsl"]
+    #[path = "shaders/fragment.glsl"]
+    //#[path = "shaders/example.glsl"]
     #[allow(dead_code)]
     struct Dummy;
 }

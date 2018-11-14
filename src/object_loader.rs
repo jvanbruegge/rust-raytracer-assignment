@@ -16,7 +16,7 @@ enum ParseState {
 }
 
 pub fn load_model() -> Model {
-    let file = File::open("resources/bunny.ply").unwrap();
+    let file = File::open("resources/bunny_low_res.ply").unwrap();
 
     let line_iter = BufReader::new(file).lines();
 
@@ -26,7 +26,7 @@ pub fn load_model() -> Model {
     let mut i: usize = 0;
     let mut vert_count = 0;
 
-    /*for line in line_iter {
+    for line in line_iter {
         let l = line.unwrap();
         let s = l.deref();
         match state {
@@ -69,13 +69,7 @@ pub fn load_model() -> Model {
                 ]);
             }
         }
-    }*/
-
-    vecs.0.push([0.0, 0.5, 0.0, 0.0]);
-    vecs.0.push([-0.5, -0.5, 0.0, 0.0]);
-    vecs.0.push([0.5, -0.5, 0.0, 0.0]);
-
-    vecs.1.push([0, 1, 2, 0]);
+    }
 
     Model {
         vertices: vecs.0,

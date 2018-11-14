@@ -15,11 +15,13 @@ I will update this section with more images
 
 Currently this raytracer looks like this:
 
-### First triangle rendered
-
-![](./progress/03_first_triangle.png)
+### Rendering a more complex model
+![](./progress/04_complex_model.png)
 
 Older versions (reverse chronological order):
+
+### First triangle rendered ([commit](https://github.com/jvanbruegge/rust-raytracer-assignment/commit/ce0da924b937a9c56d58a42ecc7049c5610bbb9f))
+![](./progress/03_first_triangle.png)
 
 ### Changing color based on window width ([commit](https://github.com/jvanbruegge/rust-raytracer-assignment/commit/719b86d65bcd53451fa37ab88d8be538a5ffc4fb))
 ![](./progress/02_window_size.gif)

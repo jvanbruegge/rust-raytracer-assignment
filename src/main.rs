@@ -32,8 +32,6 @@ mod shaders;
 struct PushData {
     time: f32,
     resolution: [u32; 2],
-    vert_length: u32,
-    idx_length: u32,
 }
 
 fn main() {
@@ -195,21 +193,25 @@ fn main() {
     let mut push_data = PushData {
         time: 0.0,
         resolution: dimensions,
-        vert_length: model.vertices.len() as u32,
-        idx_length: model.indices.len() as u32,
     };
 
     let mut new_dimensions = dimensions;
 
     let (vertex_uniform, f1) = ImmutableBuffer::from_iter(
         model.vertices.into_iter(),
-        BufferUsage::all(),
+        BufferUsage {
+            storage_buffer: true,
+            ..BufferUsage::none()
+        },
         queue.clone(),
     ).expect("Failed to create vertex uniform buffer");
 
     let (index_uniform, f2) = ImmutableBuffer::from_iter(
         model.indices.into_iter(),
-        BufferUsage::all(),
+        BufferUsage {
+            storage_buffer: true,
+            ..BufferUsage::none()
+        },
         queue.clone(),
     ).expect("Failed to create index uniform buffer");
 

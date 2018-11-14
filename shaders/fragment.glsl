@@ -6,24 +6,22 @@ const float EPSILON = 0.0000001;
 layout(location = 0) out vec4 f_color;
 
 // Has to be 128 bytes max, and divible by 4
-// Currently 4 + 8 + 8 = 20 bytes used
+// Currently 4 + 8 = 20 bytes used
 layout(push_constant) uniform PushData {
     float time;
     uint width;
     uint height;
-    uint vert_length;
-    uint idx_length;
 } push_data;
 
-layout(set = 0, binding = 0) uniform VertexData {
-    vec3[3] vertices;
+layout(set = 0, binding = 0) buffer VertexData {
+    vec3[] vertices;
 } vert;
 
-layout(set = 0, binding = 1) uniform IndexData {
-    uvec3[1] indices;
+layout(set = 0, binding = 1) buffer IndexData {
+    uvec3[] indices;
 } idx;
 
-const vec3 camera_pos = vec3(0, 0, -2.0);
+const vec3 camera_pos = vec3(0, 0.1, -0.5);
 const float near_plane = 0.5;
 const float FOV = radians(49.1);
 
@@ -78,7 +76,7 @@ void main() {
     bool hit = false;
     vec3 tmp;
 
-    for(uint i = 0; i < push_data.idx_length; i++) {
+    for(uint i = 0; i < idx.indices.length(); i++) {
         uvec3 n = idx.indices[i];
 
         if(testIntersection(
