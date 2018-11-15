@@ -5,6 +5,19 @@ const float EPSILON = 0.0000001;
 
 layout(location = 0) out vec4 f_color;
 
+struct Node {
+    float[6] bounding_box;
+    uint left_child;
+    uint right_child;
+    bool is_leaf;
+};
+
+struct Ray {
+    vec3 orig;
+    vec3 dir;
+    vec3 dir_inv;
+};
+
 // Has to be 128 bytes max, and divible by 4
 // Currently 4 + 8 = 20 bytes used
 layout(push_constant) uniform PushData {
@@ -20,6 +33,10 @@ layout(set = 0, binding = 0) buffer VertexData {
 layout(set = 0, binding = 1) buffer IndexData {
     uvec3[] indices;
 } idx;
+
+layout(set = 0, binding = 2) buffer BVH {
+    Node[] nodes;
+} bvh;
 
 const vec3 camera_pos = vec3(0, 0.1, -0.5);
 const float near_plane = 0.5;
@@ -47,7 +64,8 @@ vec3 getRay() {
 }
 
 // Möller-Trumbore algorithm, from Wikipedia
-bool testIntersection(in vec3 ray, in vec3 v0, in vec3 v1, in vec3 v2, out vec3 intersection) {
+bool testIntersection(in Ray r, in vec3 v0, in vec3 v1, in vec3 v2, out vec3 intersection, out float dist) {
+    vec3 ray = r.dir;
     vec3 edge1 = v1 - v0;
     vec3 edge2 = v2 - v0;
     vec3 h = cross(ray, edge2);
@@ -66,32 +84,67 @@ bool testIntersection(in vec3 ray, in vec3 v0, in vec3 v1, in vec3 v2, out vec3 
     float t = f * dot(edge2, q);
     if(t > EPSILON) {
         intersection = camera_pos + ray * t;
+        dist = t;
         return true;
     }
     return false;
 }
 
+bool testBox(in Ray r, in float[6] aabb) {
+    double t1 = (aabb[0] - r.orig.x) * r.dir_inv.x;
+    double t2 = (aabb[1] - r.orig.x) * r.dir_inv.x;
+
+    double tmin = min(t1, t2);
+    double tmax = max(t1, t2);
+
+    t1 = (aabb[2] - r.orig.y) * r.dir_inv.y;
+    t2 = (aabb[3] - r.orig.y) * r.dir_inv.y;
+    tmin = max(tmin, min(t1, t2));
+    tmax = min(tmax, max(t1, t2));
+
+    t1 = (aabb[4] - r.orig.z) * r.dir_inv.z;
+    t2 = (aabb[5] - r.orig.z) * r.dir_inv.z;
+    tmin = max(tmin, min(t1, t2));
+    tmax = min(tmax, max(t1, t2));
+
+    return tmax > max(tmin, 0.0);
+}
+
 void main() {
-    vec3 ray = getRay();
+    vec3 ray_dir = getRay();
+    Ray ray = Ray(camera_pos, ray_dir, 1 / ray_dir);
     bool hit = false;
     vec3 normal;
     vec3 tmp;
+    float dist;
 
-    for(uint i = 0; i < idx.indices.length(); i++) {
-        uvec3 n = idx.indices[i];
-        vec3 v0 = vert.vertices[n.x];
-        vec3 v1 = vert.vertices[n.y];
-        vec3 v2 = vert.vertices[n.z];
+    uint len = bvh.nodes.length();
+    Node n = bvh.nodes[len - 1];
 
-        if(testIntersection(ray, v0, v1, v2, tmp)) {
-            hit = true;
-            normal = normalize(cross(v1 - v0, v2 - v0));
-            break;
+    if(testBox(ray, n.bounding_box)) {
+        Node left = bvh.nodes[n.left_child];
+
+        bool hit_left = testBox(ray, left.bounding_box);
+
+        for(uint i = 0; i < idx.indices.length(); i++) {
+            uvec3 n = idx.indices[i];
+            vec3 v0 = vert.vertices[n.x];
+            vec3 v1 = vert.vertices[n.y];
+            vec3 v2 = vert.vertices[n.z];
+
+            if(testIntersection(ray, v0, v1, v2, tmp, dist)) {
+                hit = true;
+                normal = normalize(cross(v1 - v0, v2 - v0));
+                break;
+            }
         }
-    }
-
-    if(hit) {
-        f_color = vec4(normal, 1.0);
+        if(hit) {
+            f_color = vec4(normal, 1.0);
+        } else if(hit_left) {
+            f_color = vec4(1.0, 0.0, 0.0, 1.0);
+        } else {
+            f_color = vec4(1.0);
+        }
     } else {
         f_color = vec4(0.0);
     }

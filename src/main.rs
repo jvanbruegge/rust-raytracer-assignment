@@ -24,7 +24,7 @@ use vulkano::sync::{now, GpuFuture};
 use std::sync::Arc;
 use std::time::SystemTime;
 
-mod object_loader;
+mod object;
 mod shaders;
 
 #[derive(Clone, Copy)]
@@ -187,7 +187,7 @@ fn main() {
 
     let mut last_time = SystemTime::now();
 
-    let model = object_loader::load_model();
+    let object = object::load_object();
     println!("Loaded model");
 
     let mut push_data = PushData {
@@ -198,7 +198,7 @@ fn main() {
     let mut new_dimensions = dimensions;
 
     let (vertex_uniform, f1) = ImmutableBuffer::from_iter(
-        model.vertices.into_iter(),
+        object.vertices.into_iter(),
         BufferUsage {
             storage_buffer: true,
             ..BufferUsage::none()
@@ -207,7 +207,7 @@ fn main() {
     ).expect("Failed to create vertex uniform buffer");
 
     let (index_uniform, f2) = ImmutableBuffer::from_iter(
-        model.indices.into_iter(),
+        object.indices.into_iter(),
         BufferUsage {
             storage_buffer: true,
             ..BufferUsage::none()
@@ -215,8 +215,22 @@ fn main() {
         queue.clone(),
     ).expect("Failed to create index uniform buffer");
 
+    let (bvh_uniform, f3) = ImmutableBuffer::from_iter(
+        object.bvh.into_iter(),
+        BufferUsage {
+            storage_buffer: true,
+            ..BufferUsage::none()
+        },
+        queue.clone(),
+    ).expect("Failed to create bvh uniform buffer");
+
     let mut previous_frame_end = Box::new(
-        now(device.clone()).join(f1).join(f2).then_signal_fence_and_flush().unwrap()
+        now(device.clone())
+            .join(f1)
+            .join(f2)
+            .join(f3)
+            .then_signal_fence_and_flush()
+            .unwrap(),
     ) as Box<GpuFuture>;
 
     let set = Arc::new(
@@ -224,6 +238,8 @@ fn main() {
             .add_buffer(vertex_uniform.clone())
             .unwrap()
             .add_buffer(index_uniform.clone())
+            .unwrap()
+            .add_buffer(bvh_uniform.clone())
             .unwrap()
             .build()
             .unwrap(),

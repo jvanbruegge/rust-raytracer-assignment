@@ -3,11 +3,6 @@ use std::io::{BufRead, BufReader};
 use std::ops::Deref;
 use std::str::FromStr;
 
-pub struct Model {
-    pub vertices: Vec<[f32; 4]>,
-    pub indices: Vec<[u32; 4]>,
-}
-
 #[derive(PartialEq, Eq)]
 enum ParseState {
     Header,
@@ -15,7 +10,7 @@ enum ParseState {
     Indices,
 }
 
-pub fn load_model() -> Model {
+pub fn load_model() -> (Vec<[f32; 4]>, Vec<[u32; 4]>) {
     let file = File::open("resources/bunny_low_res.ply").unwrap();
 
     let line_iter = BufReader::new(file).lines();
@@ -53,7 +48,7 @@ pub fn load_model() -> Model {
                     f32::from_str(numbers.next().unwrap()).unwrap(),
                     f32::from_str(numbers.next().unwrap()).unwrap(),
                     f32::from_str(numbers.next().unwrap()).unwrap(),
-                    0.0
+                    0.0,
                 ]);
                 if vert_count == 0 {
                     state = ParseState::Indices;
@@ -71,8 +66,5 @@ pub fn load_model() -> Model {
         }
     }
 
-    Model {
-        vertices: vecs.0,
-        indices: vecs.1,
-    }
+    vecs
 }
