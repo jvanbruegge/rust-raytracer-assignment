@@ -10,8 +10,8 @@ enum ParseState {
     Indices,
 }
 
-pub fn load_model() -> (Vec<[f32; 4]>, Vec<[u32; 4]>) {
-    let file = File::open("resources/bunny_low_res.ply").unwrap();
+pub fn load_model(path: &str) -> (Vec<[f32; 4]>, Vec<[u32; 4]>) {
+    let file = File::open(path).unwrap();
 
     let line_iter = BufReader::new(file).lines();
 

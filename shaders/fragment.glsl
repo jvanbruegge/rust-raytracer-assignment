@@ -2,6 +2,8 @@
 
 const float PI = 3.1415926535897932384626433832795;
 const float EPSILON = 0.0000001;
+const float INFINITY = 1.0 / 0.0;
+const uint UINT_MAX = 0xFFFF;
 
 layout(location = 0) out vec4 f_color;
 
@@ -9,7 +11,8 @@ struct Node {
     float[6] bounding_box;
     uint left_child;
     uint right_child;
-    bool is_leaf;
+    uint parent;
+    uint is_leaf;
 };
 
 struct Ray {
@@ -19,7 +22,6 @@ struct Ray {
 };
 
 // Has to be 128 bytes max, and divible by 4
-// Currently 4 + 8 = 20 bytes used
 layout(push_constant) uniform PushData {
     float time;
     uint width;
@@ -90,7 +92,8 @@ bool testIntersection(in Ray r, in vec3 v0, in vec3 v1, in vec3 v2, out vec3 int
     return false;
 }
 
-bool testBox(in Ray r, in float[6] aabb) {
+bool testBox(in Ray r, in uint node) {
+    float[6] aabb = bvh.nodes[node].bounding_box;
     double t1 = (aabb[0] - r.orig.x) * r.dir_inv.x;
     double t2 = (aabb[1] - r.orig.x) * r.dir_inv.x;
 
@@ -110,41 +113,71 @@ bool testBox(in Ray r, in float[6] aabb) {
     return tmax > max(tmin, 0.0);
 }
 
+uvec3 getIndices(uint node) {
+    Node n = bvh.nodes[node];
+    return uvec3(
+        floatBitsToUint(n.bounding_box[0]),
+        floatBitsToUint(n.bounding_box[1]),
+        floatBitsToUint(n.bounding_box[2])
+    );
+}
+
+bool isLeaf(uint node) {
+    return bvh.nodes[node].is_leaf == 1;
+}
+
+uint getNextNode(uint node, Ray ray) {
+    if(!isLeaf(node) && testBox(ray, node)) {
+        return bvh.nodes[node].left_child;
+    }
+
+    uint root = bvh.nodes.length() - 1;
+    uint ni = node;
+    while(ni < root) {
+        Node n = bvh.nodes[ni];
+        Node parent = bvh.nodes[n.parent];
+        if(ni == parent.left_child && testBox(ray, parent.right_child)) {
+            return parent.right_child;
+        }
+        ni = n.parent;
+    }
+    return UINT_MAX;
+}
+
 void main() {
     vec3 ray_dir = getRay();
     Ray ray = Ray(camera_pos, ray_dir, 1 / ray_dir);
+
     bool hit = false;
     vec3 normal;
-    vec3 tmp;
-    float dist;
 
-    uint len = bvh.nodes.length();
-    Node n = bvh.nodes[len - 1];
+    uint root = bvh.nodes.length() - 1;
+    if(testBox(ray, root)) {
+        uint current = root;
+        float dist = INFINITY;
 
-    if(testBox(ray, n.bounding_box)) {
-        Node left = bvh.nodes[n.left_child];
+        while((current = getNextNode(current, ray)) < UINT_MAX) {
+            if(isLeaf(current)) {
+                uvec3 idx = getIndices(current);
+                vec3 v0 = vert.vertices[idx.x];
+                vec3 v1 = vert.vertices[idx.y];
+                vec3 v2 = vert.vertices[idx.z];
+                vec3 tmp;
+                float t;
 
-        bool hit_left = testBox(ray, left.bounding_box);
-
-        for(uint i = 0; i < idx.indices.length(); i++) {
-            uvec3 n = idx.indices[i];
-            vec3 v0 = vert.vertices[n.x];
-            vec3 v1 = vert.vertices[n.y];
-            vec3 v2 = vert.vertices[n.z];
-
-            if(testIntersection(ray, v0, v1, v2, tmp, dist)) {
-                hit = true;
-                normal = normalize(cross(v1 - v0, v2 - v0));
-                break;
+                if(testIntersection(ray, v0, v1, v2, tmp, t)) {
+                    hit = true;
+                    if(t < dist) {
+                        dist = t;
+                        normal = normalize(cross(v1 - v0, v2 - v0));
+                    }
+                }
             }
         }
-        if(hit) {
-            f_color = vec4(normal, 1.0);
-        } else if(hit_left) {
-            f_color = vec4(1.0, 0.0, 0.0, 1.0);
-        } else {
-            f_color = vec4(1.0);
-        }
+    }
+
+    if(hit) {
+        f_color = vec4(normal, 1.0);
     } else {
         f_color = vec4(0.0);
     }

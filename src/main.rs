@@ -187,7 +187,7 @@ fn main() {
 
     let mut last_time = SystemTime::now();
 
-    let object = object::load_object();
+    let object = object::load_object("resources/bunny_low_res.ply");
     println!("Loaded model");
 
     let mut push_data = PushData {

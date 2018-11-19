@@ -7,8 +7,8 @@ pub struct Object {
     pub bvh: Vec<bvh::Node>,
 }
 
-pub fn load_object() -> Object {
-    let (vertices, indices) = object_loader::load_model();
+pub fn load_object(path: &str) -> Object {
+    let (vertices, indices) = object_loader::load_model(path);
 
     let bvh = bvh::construct_bvh(&vertices, &indices);
 

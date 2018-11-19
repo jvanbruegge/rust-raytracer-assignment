@@ -40,6 +40,7 @@ pub union NodeData {
 #[derive(Clone)]
 pub struct Node {
     data: NodeData,
+    parent: u32,
     is_leaf: bool,
 }
 
@@ -132,8 +133,31 @@ pub fn construct_bvh(vertices: &Vec<[f32; 4]>, indices: &Vec<[u32; 4]>) -> Vec<N
     flat_tree.reserve_exact(indices.len() * 2 - 1);
 
     flatten_tree(&mut flat_tree, &tree, vertices);
+    let idx = flat_tree.len() - 1 as usize;
+
+    set_parents(&mut flat_tree, idx);
 
     flat_tree
+}
+
+fn set_parents(vec: &mut Vec<Node>, index: usize) {
+    let (l, r) = unsafe {
+        let n = &vec[index];
+        (
+            n.data.node.left_child as usize,
+            n.data.node.right_child as usize,
+        )
+    };
+
+    vec[l].parent = index as u32;
+    vec[r].parent = index as u32;
+
+    if !vec[l].is_leaf {
+        set_parents(vec, l);
+    }
+    if !vec[r].is_leaf {
+        set_parents(vec, r);
+    }
 }
 
 fn flatten_tree(vec: &mut Vec<Node>, tree: &BVH, vertices: &Vec<[f32; 4]>) -> usize {
@@ -141,6 +165,7 @@ fn flatten_tree(vec: &mut Vec<Node>, tree: &BVH, vertices: &Vec<[f32; 4]>) -> us
         BVH::Leaf(idx) => {
             vec.push(Node {
                 is_leaf: true,
+                parent: 0,
                 data: NodeData { leaf: *idx },
             });
 
@@ -167,6 +192,7 @@ fn flatten_tree(vec: &mut Vec<Node>, tree: &BVH, vertices: &Vec<[f32; 4]>) -> us
 
             vec.push(Node {
                 is_leaf: false,
+                parent: 0,
                 data: NodeData {
                     node: InnerNodeData {
                         left_child: left_idx as u32,
