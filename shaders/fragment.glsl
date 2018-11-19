@@ -144,6 +144,8 @@ uint getNextNode(uint node, Ray ray) {
     return UINT_MAX;
 }
 
+//#define NO_TREE
+
 void main() {
     vec3 ray_dir = getRay();
     Ray ray = Ray(camera_pos, ray_dir, 1 / ray_dir);
@@ -156,6 +158,7 @@ void main() {
         uint current = root;
         float dist = INFINITY;
 
+#ifndef NO_TREE
         while((current = getNextNode(current, ray)) < UINT_MAX) {
             if(isLeaf(current)) {
                 uvec3 idx = getIndices(current);
@@ -174,6 +177,25 @@ void main() {
                 }
             }
         }
+#else
+        for(uint i = 0; i < idx.indices.length(); i++) {
+            uvec3 idx = idx.indices[i];
+            vec3 v0 = vert.vertices[idx.x];
+            vec3 v1 = vert.vertices[idx.y];
+            vec3 v2 = vert.vertices[idx.z];
+            vec3 tmp;
+            float t;
+
+            if(testIntersection(ray, v0, v1, v2, tmp, t)) {
+                hit = true;
+                if(t < dist) {
+                    dist = t;
+                    normal = normalize(cross(v1 - v0, v2 - v0));
+                }
+            }
+
+        }
+#endif
     }
 
     if(hit) {
