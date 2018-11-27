@@ -2,8 +2,7 @@
 // TIE-52306 Computer Graphics Coding Assignment 2018
 //
 // Write your name and student id here:
-//   example name, 123456
-//
+//   Jan van Brügge, 282922
 // Mark here with an X what functionalities you implemented
 // Note that different functionalities are worth different amount of points.
 //
@@ -11,9 +10,9 @@
 //-------------------------------------------------------------------------------
 // example functionality          | X  | Example note: control this with var YYYY
 // Madatory functionalities -----------------------------------------------------
-//   Perspective projection       |    | 
-//   Phong shading                |    | 
-//   Camera movement and rotation |    | 
+//   Perspective projection       | X  | 
+//   Phong shading                | X  | 
+//   Camera movement and rotation | X  | 
 // Extra funtionalities ---------------------------------------------------------
 //   Attend visiting lecture 1    |    | 
 //   Attend visiting lecture 2    |    | 
@@ -34,6 +33,9 @@
 //   Advanced own SDF             |    | 
 //   Animated SDF                 |    | 
 //   Other?                       |    | 
+//   Ray-Triangle Intersection    | X  |
+//   BVH tree generation          | X  |
+//   Custom loader                | X  |
 
 #version 450
 
@@ -82,13 +84,13 @@ layout(push_constant) uniform PushData {
 
 layout(location = 0) out vec4 f_color;
 
-layout(set = 0, binding = 0) uniform VertexData {
-    vec3[3] vertices;
+/*layout(set = 0, binding = 0) buffer VertexData {
+    vec3[] vertices;
 } vert;
 
-layout(set = 0, binding = 1) uniform IndexData {
-    uvec3[1] indices;
-} idx;
+layout(set = 0, binding = 1) buffer IndexData {
+    uvec3[] indices;
+} idx;*/
 
 
 struct material
@@ -375,8 +377,48 @@ vec3 render(vec3 o, vec3 v)
     intersect(o, v, MAX_DIST, p, n, mat, false);
 
     // Add some lighting code here!
+    vec3 light_dir = normalize(lamp_pos - p);
+    float l = max(dot(light_dir, n), 0.0);
+    float s = 0.0;
 
-    return mat.color.rgb;
+    if(l > 0.0) {
+        vec3 refl_dir = reflect(-light_dir, n);
+        float angle = max(dot(refl_dir, v), 0.0);
+        s = pow(angle, 4.0);
+    }
+
+    return l * mat.color.rgb + s * vec3(1.0);
+}
+
+const float near_plane = 0.01;
+const float FOV = radians(90);
+
+void getEdges(in vec3 camera_pos, in vec3 camera_dir,
+        out vec3 upper_left, out vec3 upper_right, out vec3 lower_left) {
+
+    vec3 camera_up = vec3(0.0, 1.0, 0.0);
+    vec3 camera_right = cross(camera_dir, camera_up);
+    float plane_x_half = sin(FOV/2) * near_plane;
+    float plane_y_half = plane_x_half * push_data.height / push_data.width;
+
+    vec3 x = camera_right * plane_x_half;
+    vec3 y = camera_up * plane_y_half;
+    vec3 z = camera_dir * near_plane;
+
+    upper_left = camera_pos - x + y + z;
+    upper_right = camera_pos + x + y + z;
+    lower_left = camera_pos - x - y + z;
+}
+
+vec3 getRay(in vec3 camera_pos, in vec3 camera_dir) {
+    vec3 u_l, u_r, l_l;
+    getEdges(camera_pos, camera_dir, u_l, u_r, l_l);
+
+    return normalize(
+        (u_l + (gl_FragCoord.x / push_data.width) * (u_r - u_l)
+            + (gl_FragCoord.y / push_data.height) * (l_l - u_l))
+        - camera_pos
+    );
 }
 
 void main()
@@ -391,9 +433,12 @@ void main()
 
     // Modify these two to create perspective projection!
     // Origin of the view ray
-    vec3 o = vec3(2.96*vec2(uv.x * aspect, uv.y), -2.0);
+    vec3 o = vec3(0.0, sin(push_data.time), -5.0);
+
+    vec3 dir = normalize(vec3(sin(push_data.time)*0.1, 0, 1 + cos(push_data.time)*0.1));
+
     // Direction of the view ray
-    vec3 v = vec3(0,0,1);
+    vec3 v = getRay(o, dir);
 
     f_color = vec4(render(o, v), 1.0);
 }
