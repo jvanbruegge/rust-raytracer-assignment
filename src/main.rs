@@ -7,8 +7,9 @@ extern crate winit;
 
 use vulkano_win::VkSurfaceBuild;
 
-use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer};
+use vulkano::buffer::{BufferUsage, CpuAccessibleBuffer, ImmutableBuffer};
 use vulkano::command_buffer::{AutoCommandBufferBuilder, DynamicState};
+use vulkano::descriptor::descriptor_set::PersistentDescriptorSet;
 use vulkano::device::Device;
 use vulkano::framebuffer::{Framebuffer, Subpass};
 use vulkano::instance::Instance;
@@ -186,7 +187,7 @@ fn main() {
 
     let mut last_time = SystemTime::now();
 
-    let _object = object::load_object("resources/bunny_low_res.ply");
+    let object = object::load_object("resources/bunny_low_res.ply");
     println!("Loaded model");
 
     let mut push_data = PushData {
@@ -196,7 +197,7 @@ fn main() {
 
     let mut new_dimensions = dimensions;
 
-    /*let (vertex_uniform, f1) = ImmutableBuffer::from_iter(
+    let (vertex_uniform, f1) = ImmutableBuffer::from_iter(
         object.vertices.into_iter(),
         BufferUsage {
             storage_buffer: true,
@@ -212,37 +213,37 @@ fn main() {
             ..BufferUsage::none()
         },
         queue.clone(),
-    ).expect("Failed to create index uniform buffer");*/
+    ).expect("Failed to create index uniform buffer");
 
-    /*let (bvh_uniform, f3) = ImmutableBuffer::from_iter(
+    let (bvh_uniform, f3) = ImmutableBuffer::from_iter(
         object.bvh.into_iter(),
         BufferUsage {
             storage_buffer: true,
             ..BufferUsage::none()
         },
         queue.clone(),
-    ).expect("Failed to create bvh uniform buffer");*/
+    ).expect("Failed to create bvh uniform buffer");
 
     let mut previous_frame_end = Box::new(
         now(device.clone())
-            /*.join(f1)
+            .join(f1)
             .join(f2)
             .join(f3)
             .then_signal_fence_and_flush()
-            .unwrap(),*/
+            .unwrap(),
     ) as Box<GpuFuture>;
 
-    /*let set = Arc::new(
+    let set = Arc::new(
         PersistentDescriptorSet::start(pipeline.clone(), 0)
-            /*.add_buffer(vertex_uniform.clone())
+            .add_buffer(vertex_uniform.clone())
             .unwrap()
             .add_buffer(index_uniform.clone())
             .unwrap()
             .add_buffer(bvh_uniform.clone())
-            .unwrap()*/
+            .unwrap()
             .build()
             .unwrap(),
-    );*/
+    );
 
     loop {
         let current_time = SystemTime::now();
@@ -335,7 +336,7 @@ fn main() {
                     pipeline.clone(),
                     &dynamic_state,
                     vertex_buffer.clone(),
-                    (), //set.clone(),
+                    set.clone(),
                     push_data,
                 ).unwrap()
                 .end_render_pass()
